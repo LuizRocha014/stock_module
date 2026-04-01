@@ -1,6 +1,7 @@
 import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:in_out_layout/in_out_layout.dart';
 import 'package:stock_module/modules/presentation/controllers/stock_home_controller.dart';
 
 class StockHomePage extends StatefulWidget {
@@ -24,25 +25,14 @@ class _StockHomePageState extends State<StockHomePage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const TextWidget(
-          'Estoque',
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        backgroundColor: scheme.primaryContainer,
-        foregroundColor: scheme.onPrimaryContainer,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Get.back(),
-        ),
-      ),
+    return AdaptiveModulePage(
+      title: 'Estoque',
+      onBack: () => Get.back(),
       body: Center(
         child: TextWidget(
           'stock_module',
           textColor: scheme.onSurface,
-          fontSize: 16,
+          fontSize: isDesktopFormFactor ? 18 : 16,
         ),
       ),
     );

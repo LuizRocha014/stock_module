@@ -6,6 +6,7 @@ Pacote Flutter de **estoque** do ecossistema InOutWareApp. Mesmo desenho arquite
 
 - **`componentes_lr`**: `path: ../../../Flutter_X_Components_Flutter`.
 - **`get`**: controllers e telas do módulo.
+- **`in_out_layout`**: layout desktop vs mobile (`AdaptiveModulePage`).
 
 ## Estrutura
 
