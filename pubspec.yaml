@@ -12,12 +12,11 @@ dependencies:
     sdk: flutter
 
   componentes_lr:
-    path: ../../../Flutter_X_Components_Flutter
+    path: C:\Repository\Flutter_X_Components_Flutter
 
   get: ^4.6.6
-
-  in_out_layout:
-    path: ../in_out_layout
+  http: ^1.2.2
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

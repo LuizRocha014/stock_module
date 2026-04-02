@@ -1,7 +1,7 @@
 import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:in_out_layout/in_out_layout.dart';
+import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
 import 'package:stock_module/modules/presentation/controllers/stock_home_controller.dart';
 
 class StockHomePage extends StatefulWidget {
@@ -28,11 +28,207 @@ class _StockHomePageState extends State<StockHomePage> {
     return AdaptiveModulePage(
       title: 'Estoque',
       onBack: () => Get.back(),
-      body: Center(
-        child: TextWidget(
-          'stock_module',
-          textColor: scheme.onSurface,
-          fontSize: isDesktopFormFactor ? 18 : 16,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Filtrar por nome, SKU, código de barras…',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              isDense: true,
+            ),
+            onChanged: (v) => controller.filterQuery.value = v,
+          ),
+          const SizedBox(height: 12),
+          Obx(
+            () => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : () => controller.openAddEntrySheet(context),
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Adicionar entrada'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : () => controller.openCreateProductSheet(context),
+                  icon: const Icon(Icons.add_box_outlined),
+                  label: const Text('Novo produto'),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Atualizar',
+                  onPressed:
+                      controller.isLoading.value ? null : controller.refreshInventory,
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value && controller.rows.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final err = controller.errorMessage.value;
+              if (err != null && controller.rows.isEmpty) {
+                return _ErrorState(
+                  message: err,
+                  onRetry: controller.refreshInventory,
+                );
+              }
+              if (controller.rows.isEmpty) {
+                return Center(
+                  child: Text(
+                    'Nenhum lote listado. Registre uma entrada ou atualize a lista.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                );
+              }
+              final list = controller.filteredRows;
+              if (list.isEmpty) {
+                return Center(
+                  child: Text(
+                    'Nenhum item corresponde ao filtro.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: controller.refreshInventory,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    _TableHeader(scheme: scheme),
+                    const Divider(height: 1),
+                    ...list.map(
+                      (r) => _StockRow(
+                        row: r,
+                        validity: controller.formatValidity(r.expirationDate),
+                        onEdit: () => controller.openEditSheet(context, r),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableHeader extends StatelessWidget {
+  const _TableHeader({required this.scheme});
+
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: isDesktopFormFactor ? 14 : 13,
+      color: scheme.primary,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text('Nome', style: style)),
+          Expanded(flex: 2, child: Text('Validade', style: style)),
+          Expanded(flex: 2, child: Text('Quantidade', style: style)),
+          Expanded(flex: 2, child: Text('Preço / unid.', style: style)),
+          SizedBox(
+            width: 48,
+            child: Icon(Icons.edit_outlined, size: 18, color: scheme.primary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StockRow extends StatelessWidget {
+  const _StockRow({
+    required this.row,
+    required this.validity,
+    required this.onEdit,
+  });
+
+  final StockInventoryRowEntity row;
+  final String validity;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final cell = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              row.productName,
+              style: cell?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(flex: 2, child: Text(validity, style: cell)),
+          Expanded(flex: 2, child: Text(row.quantityLabel, style: cell)),
+          Expanded(flex: 2, child: Text(row.unitOrCostLabel, style: cell)),
+          SizedBox(
+            width: 48,
+            child: IconButton(
+              tooltip: 'Editar',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              icon: const Icon(Icons.edit_outlined, size: 22),
+              onPressed: onEdit,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 48, color: scheme.error),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurface),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+          ],
         ),
       ),
     );
