@@ -1,3 +1,4 @@
+import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:stock_module/modules/domain/entities/create_product_params.dart';
 import 'package:stock_module/modules/presentation/utils/brl_currency_formatter.dart';
@@ -9,7 +10,7 @@ class StockCreateProductSheet extends StatefulWidget {
     required this.onSave,
   });
 
-  final Future<void> Function(CreateProductParams params) onSave;
+  final Future<void> Function(CreateProductParams params, {String? imagePath}) onSave;
 
   @override
   State<StockCreateProductSheet> createState() => _StockCreateProductSheetState();
@@ -23,6 +24,7 @@ class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
   String _unitType = 'UN';
   bool _isPerishable = false;
   bool _saving = false;
+  String? _imagePath;
 
   @override
   void initState() {
@@ -67,6 +69,7 @@ class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
           isPerishable: _isPerishable,
           salePrice: sale < 0 ? 0 : sale,
         ),
+        imagePath: _imagePath,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -131,6 +134,11 @@ class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
                 labelText: 'Código de barras (opcional)',
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 12),
+            ImagePickerInputWidget(
+              title: 'Imagem do produto (opcional)',
+              onImageChanged: (path) => _imagePath = path,
             ),
             const SizedBox(height: 12),
             InputDecorator(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -35,6 +37,11 @@ class _StockHomePageState extends State<StockHomePage> {
             decoration: InputDecoration(
               hintText: 'Filtrar por nome, SKU, código de barras…',
               prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                tooltip: 'Ler código de barras',
+                icon: const Icon(Icons.camera_alt_outlined),
+                onPressed: () => controller.openBarcodeScanner(context),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -145,10 +152,12 @@ class _TableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
+          const SizedBox(width: 58),
           Expanded(flex: 3, child: Text('Nome', style: style)),
           Expanded(flex: 2, child: Text('Validade', style: style)),
           Expanded(flex: 2, child: Text('Quantidade', style: style)),
-          Expanded(flex: 2, child: Text('Preço / unid.', style: style)),
+          Expanded(flex: 2, child: Text('Custo', style: style)),
+          Expanded(flex: 2, child: Text('Venda', style: style)),
           SizedBox(
             width: 48,
             child: Icon(Icons.edit_outlined, size: 18, color: scheme.primary),
@@ -178,6 +187,13 @@ class _StockRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SizedBox(
+            width: 58,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _ProductImageThumb(imageUrl: row.imageUrl),
+            ),
+          ),
           Expanded(
             flex: 3,
             child: Text(
@@ -186,8 +202,16 @@ class _StockRow extends StatelessWidget {
             ),
           ),
           Expanded(flex: 2, child: Text(validity, style: cell)),
-          Expanded(flex: 2, child: Text(row.quantityLabel, style: cell)),
-          Expanded(flex: 2, child: Text(row.unitOrCostLabel, style: cell)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              row.quantityLabel,
+              style: cell,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(flex: 2, child: Text(row.costLabel, style: cell)),
+          Expanded(flex: 2, child: Text(row.saleLabel, style: cell)),
           SizedBox(
             width: 48,
             child: IconButton(
@@ -200,6 +224,53 @@ class _StockRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProductImageThumb extends StatelessWidget {
+  const _ProductImageThumb({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = imageUrl?.trim();
+    final scheme = Theme.of(context).colorScheme;
+    if (value == null || value.isEmpty) {
+      return _placeholder(scheme);
+    }
+    final isHttp = value.startsWith('http://') || value.startsWith('https://');
+    final image = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: isHttp
+          ? Image.network(
+              value,
+              height: 42,
+              width: 42,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(scheme),
+            )
+          : Image.file(
+              File(value),
+              height: 42,
+              width: 42,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(scheme),
+            ),
+    );
+    return SizedBox(width: 42, height: 42, child: image);
+  }
+
+  Widget _placeholder(ColorScheme scheme) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: scheme.surfaceContainerHighest,
+      ),
+      child: Icon(Icons.image_outlined, size: 20, color: scheme.onSurfaceVariant),
     );
   }
 }

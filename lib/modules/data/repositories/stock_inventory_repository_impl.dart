@@ -1,6 +1,4 @@
 import 'package:stock_module/modules/data/datasource/remote/stock_inventory_remote_datasource.dart';
-import 'package:stock_module/modules/data/models/product_batch_dto.dart';
-import 'package:stock_module/modules/data/models/product_dto.dart';
 import 'package:stock_module/modules/domain/entities/create_product_params.dart';
 import 'package:stock_module/modules/domain/entities/product_snapshot.dart';
 import 'package:stock_module/modules/domain/entities/stock_entry_params.dart';
@@ -31,15 +29,22 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
     final products = await _remote.fetchProducts();
     final byId = {for (final p in products) p.id: p};
     final batches = await _remote.fetchProductBatches(branchId: branchId);
+    final productIds = batches.map((e) => e.productId).toSet();
+    final imageByProduct = <String, String?>{};
+    await Future.wait(
+      productIds.map((id) async {
+        try {
+          imageByProduct[id] = await _remote.fetchMainProductImageUrl(id);
+        } catch (_) {
+          imageByProduct[id] = null;
+        }
+      }),
+    );
 
-    String unitOrCostLabel(ProductDto? p, ProductBatchDto b) {
-      final cost = b.effectiveCost;
-      if (cost != null) {
-        return 'Custo ${cost.toStringAsFixed(2).replaceAll('.', ',')}';
-      }
-      final ut = p?.unitType;
-      if (ut != null && ut.isNotEmpty) return 'Unidade: $ut';
-      return '—';
+    String asMoney(num? value) {
+      if (value == null) return 'R\$ 0,00';
+      final fixed = value.toStringAsFixed(2).replaceAll('.', ',');
+      return 'R\$ $fixed';
     }
 
     final rows = <StockInventoryRowEntity>[];
@@ -55,10 +60,12 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
           productName: name,
           sku: p?.sku,
           barcode: p?.barcode,
+          imageUrl: imageByProduct[b.productId],
           expirationDate: b.expirationDate,
           quantity: q,
           quantityLabel: q == null ? '—' : _formatQty(q),
-          unitOrCostLabel: unitOrCostLabel(p, b),
+          costLabel: asMoney(b.effectiveCost),
+          saleLabel: asMoney(p?.salePrice),
         ),
       );
     }
@@ -97,6 +104,19 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
       'salePrice': p.salePrice,
     });
     return ProductRef(id: dto.id, name: dto.name, unitType: dto.unitType);
+  }
+
+  @override
+  Future<void> addProductImage(
+    String productId, {
+    required String imageUrl,
+    bool isMain = true,
+  }) {
+    return _remote.postProductImage(
+      productId,
+      url: imageUrl,
+      isMain: isMain,
+    );
   }
 
   @override

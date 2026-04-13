@@ -14,6 +14,12 @@ abstract class IStockInventoryRepository {
 
   Future<ProductRef> createProduct(CreateProductParams params);
 
+  Future<void> addProductImage(
+    String productId, {
+    required String imageUrl,
+    bool isMain = true,
+  });
+
   Future<ProductSnapshot> getProductSnapshot(String productId);
 
   Future<void> applyProductSnapshot(ProductSnapshot snapshot);

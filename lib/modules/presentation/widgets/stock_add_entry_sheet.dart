@@ -1,3 +1,4 @@
+import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:stock_module/modules/domain/entities/create_product_params.dart';
 import 'package:stock_module/modules/domain/entities/stock_entry_params.dart';
@@ -15,8 +16,12 @@ class StockAddEntrySheet extends StatefulWidget {
 
   final List<ProductRef> products;
   final List<BranchRef> branches;
-  final Future<ProductRef> Function(CreateProductParams params) onCreateProduct;
-  final Future<void> Function(StockEntryParams params, {String? barcode}) onSubmit;
+  final Future<ProductRef> Function(CreateProductParams params, {String? imagePath}) onCreateProduct;
+  final Future<void> Function(
+    StockEntryParams params, {
+    String? barcode,
+    String? imagePath,
+  }) onSubmit;
 
   @override
   State<StockAddEntrySheet> createState() => _StockAddEntrySheetState();
@@ -37,6 +42,8 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
   final _newSaleCtrl = TextEditingController();
   String _newUnitType = 'UN';
   bool _newPerishable = false;
+  String? _newImagePath;
+  String? _existingImagePath;
 
   DateTime? _expiration;
   bool _saving = false;
@@ -127,6 +134,7 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
             isPerishable: _newPerishable,
             salePrice: sale < 0 ? 0 : sale,
           ),
+          imagePath: _newImagePath,
         );
         productId = ref.id;
       } else {
@@ -134,8 +142,8 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
       }
 
       final cost = BrlCurrencyInputFormatter.parseToDouble(_costCtrl.text);
-      final barcodePatch =
-          !_useNewProduct ? _barcodeUpdateCtrl.text.trim() : '';
+      final barcodePatch = !_useNewProduct ? _barcodeUpdateCtrl.text.trim() : '';
+      final imagePath = !_useNewProduct ? _existingImagePath : null;
 
       await widget.onSubmit(
         StockEntryParams(
@@ -147,6 +155,7 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
           entryDate: null,
         ),
         barcode: barcodePatch.isEmpty ? null : barcodePatch,
+        imagePath: imagePath,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -251,6 +260,11 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: 12),
+              ImagePickerInputWidget(
+                title: 'Foto do produto (opcional)',
+                onImageChanged: (path) => _existingImagePath = path,
+              ),
+              const SizedBox(height: 12),
             ] else ...[
               TextField(
                 controller: _newNameCtrl,
@@ -275,6 +289,11 @@ class _StockAddEntrySheetState extends State<StockAddEntrySheet> {
                   labelText: 'Código de barras (opcional)',
                   border: OutlineInputBorder(),
                 ),
+              ),
+              const SizedBox(height: 12),
+              ImagePickerInputWidget(
+                title: 'Imagem do novo produto (opcional)',
+                onImageChanged: (path) => _newImagePath = path,
               ),
               const SizedBox(height: 12),
               InputDecorator(

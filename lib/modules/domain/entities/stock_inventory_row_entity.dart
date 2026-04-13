@@ -6,10 +6,12 @@ class StockInventoryRowEntity {
     required this.productName,
     this.sku,
     this.barcode,
+    this.imageUrl,
     this.expirationDate,
     this.quantity,
     required this.quantityLabel,
-    required this.unitOrCostLabel,
+    required this.costLabel,
+    required this.saleLabel,
   });
 
   final String batchId;
@@ -17,8 +19,10 @@ class StockInventoryRowEntity {
   final String productName;
   final String? sku;
   final String? barcode;
+  final String? imageUrl;
   final DateTime? expirationDate;
   final num? quantity;
   final String quantityLabel;
-  final String unitOrCostLabel;
+  final String costLabel;
+  final String saleLabel;
 }

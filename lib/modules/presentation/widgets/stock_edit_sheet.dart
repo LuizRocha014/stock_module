@@ -1,3 +1,4 @@
+import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:stock_module/modules/domain/entities/product_snapshot.dart';
 import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
@@ -17,6 +18,7 @@ class StockEditSheet extends StatefulWidget {
     ProductSnapshot product,
     DateTime? batchExpiration,
     bool batchActive,
+    String? imagePath,
   ) onSave;
 
   @override
@@ -33,6 +35,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
   bool _saving = false;
   Object? _loadError;
   ProductSnapshot? _base;
+  String? _imagePath;
 
   @override
   void initState() {
@@ -92,7 +95,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
     );
     setState(() => _saving = true);
     try {
-      await widget.onSave(updated, _batchExpiration, _batchActive);
+      await widget.onSave(updated, _batchExpiration, _batchActive, _imagePath);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -188,6 +191,11 @@ class _StockEditSheetState extends State<StockEditSheet> {
                         ),
                         keyboardType: TextInputType.number,
                         inputFormatters: [BrlCurrencyInputFormatter()],
+                      ),
+                      const SizedBox(height: 16),
+                      ImagePickerInputWidget(
+                        title: 'Adicionar imagem do produto (opcional)',
+                        onImageChanged: (path) => _imagePath = path,
                       ),
                       const SizedBox(height: 16),
                       Text(

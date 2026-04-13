@@ -11,6 +11,7 @@ abstract class IStockInventoryRemoteDataSource {
   Future<List<ProductDto>> fetchProducts();
 
   Future<ProductDto> fetchProduct(String id);
+  Future<String?> fetchMainProductImageUrl(String productId);
 
   Future<List<ProductBatchDto>> fetchProductBatches({String? branchId, String? productId});
 
@@ -19,6 +20,12 @@ abstract class IStockInventoryRemoteDataSource {
   Future<StockEntryResponse> postInventoryEntry(StockEntryRequest request);
 
   Future<ProductDto> postProduct(Map<String, dynamic> body);
+
+  Future<void> postProductImage(
+    String productId, {
+    required String url,
+    bool isMain = true,
+  });
 
   Future<void> putProduct(String id, Map<String, dynamic> body);
 
@@ -121,6 +128,30 @@ class StockInventoryRemoteDataSource implements IStockInventoryRemoteDataSource 
   }
 
   @override
+  Future<String?> fetchMainProductImageUrl(String productId) async {
+    final r = await _client.get(
+      _uri('/api/products/$productId/images'),
+      headers: _headers(),
+    );
+    _throwIfError(r, 'GET /api/products/{productId}/images');
+    final list = decodeJsonList(r.body);
+    if (list.isEmpty) return null;
+    Map<String, dynamic>? main;
+    for (final item in list) {
+      final m = asMap(item);
+      final isMain = mapValue<bool>(m, const ['isMain', 'IsMain']) ?? false;
+      if (isMain) {
+        main = m;
+        break;
+      }
+      main ??= m;
+    }
+    if (main == null) return null;
+    final url = mapString(main, const ['url', 'Url']);
+    return (url == null || url.isEmpty) ? null : url;
+  }
+
+  @override
   Future<List<ProductBatchDto>> fetchProductBatches({String? branchId, String? productId}) async {
     final q = <String, String>{};
     if (branchId != null && branchId.isNotEmpty) q['branchId'] = branchId;
@@ -190,6 +221,23 @@ class StockInventoryRemoteDataSource implements IStockInventoryRemoteDataSource 
     throw StockInventoryApiException(
       'Produto criado, mas a API não retornou o ID (corpo ou cabeçalho Location).',
     );
+  }
+
+  @override
+  Future<void> postProductImage(
+    String productId, {
+    required String url,
+    bool isMain = true,
+  }) async {
+    final r = await _client.post(
+      _uri('/api/products/$productId/images'),
+      headers: _headers(),
+      body: jsonEncode({
+        'url': url,
+        'isMain': isMain,
+      }),
+    );
+    _throwIfError(r, 'Cadastro de imagem do produto');
   }
 
   @override
