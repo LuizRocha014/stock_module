@@ -17,6 +17,12 @@ void initUseCasesInstances() {
     ),
   );
 
+  instanceManager.registerLazySingleton<GetProductStockDetailUseCase>(
+    () => GetProductStockDetailUseCase(
+      instanceManager.get<IStockInventoryRepository>(),
+    ),
+  );
+
   instanceManager.registerLazySingleton<ListStockFormOptionsUseCase>(
     () => ListStockFormOptionsUseCase(
       instanceManager.get<IStockInventoryRepository>(),
@@ -25,6 +31,12 @@ void initUseCasesInstances() {
 
   instanceManager.registerLazySingleton<RegisterStockEntryUseCase>(
     () => RegisterStockEntryUseCase(
+      instanceManager.get<IStockInventoryRepository>(),
+    ),
+  );
+
+  instanceManager.registerLazySingleton<DeleteProductBatchUseCase>(
+    () => DeleteProductBatchUseCase(
       instanceManager.get<IStockInventoryRepository>(),
     ),
   );

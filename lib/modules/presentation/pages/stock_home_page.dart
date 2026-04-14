@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:componentes_lr/componentes_lr.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
+import 'package:stock_module/modules/domain/entities/stock_product_summary_entity.dart';
 import 'package:stock_module/modules/presentation/controllers/stock_home_controller.dart';
 
 class StockHomePage extends StatefulWidget {
@@ -79,7 +79,14 @@ class _StockHomePageState extends State<StockHomePage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Text(
+            'Lista por produto (toque para ver lotes e validades).',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.rows.isEmpty) {
@@ -95,7 +102,7 @@ class _StockHomePageState extends State<StockHomePage> {
               if (controller.rows.isEmpty) {
                 return Center(
                   child: Text(
-                    'Nenhum lote listado. Registre uma entrada ou atualize a lista.',
+                    'Nenhum produto com estoque listado. Registre uma entrada ou atualize a lista.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
@@ -121,8 +128,8 @@ class _StockHomePageState extends State<StockHomePage> {
                     ...list.map(
                       (r) => _StockRow(
                         row: r,
-                        validity: controller.formatValidity(r.expirationDate),
-                        onEdit: () => controller.openEditSheet(context, r),
+                        validity: controller.formatValidity(r.earliestExpiration),
+                        onOpenDetail: () => controller.openProductDetailSheet(context, r),
                       ),
                     ),
                   ],
@@ -153,14 +160,20 @@ class _TableHeader extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 58),
-          Expanded(flex: 3, child: Text('Nome', style: style)),
-          Expanded(flex: 2, child: Text('Validade', style: style)),
-          Expanded(flex: 2, child: Text('Quantidade', style: style)),
-          Expanded(flex: 2, child: Text('Custo', style: style)),
+          Expanded(flex: 3, child: Text('Produto', style: style)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Menor validade',
+              style: style,
+            ),
+          ),
+          Expanded(flex: 2, child: Text('Qtd total', style: style)),
+          Expanded(flex: 2, child: Text('Custo médio', style: style)),
           Expanded(flex: 2, child: Text('Venda', style: style)),
           SizedBox(
-            width: 48,
-            child: Icon(Icons.edit_outlined, size: 18, color: scheme.primary),
+            width: 40,
+            child: Icon(Icons.chevron_right, size: 20, color: scheme.primary),
           ),
         ],
       ),
@@ -172,57 +185,73 @@ class _StockRow extends StatelessWidget {
   const _StockRow({
     required this.row,
     required this.validity,
-    required this.onEdit,
+    required this.onOpenDetail,
   });
 
-  final StockInventoryRowEntity row;
+  final StockProductSummaryEntity row;
   final String validity;
-  final VoidCallback onEdit;
+  final VoidCallback onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final cell = Theme.of(context).textTheme.bodyMedium;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 58,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _ProductImageThumb(imageUrl: row.imageUrl),
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpenDetail,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 58,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _ProductImageThumb(imageUrl: row.imageUrl),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      row.productName,
+                      style: cell?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    if (row.activeBatchCount > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '${row.activeBatchCount} lotes ativos',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(flex: 2, child: Text(validity, style: cell)),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  row.quantityLabel,
+                  style: cell,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Expanded(flex: 2, child: Text(row.costLabel, style: cell)),
+              Expanded(flex: 2, child: Text(row.saleLabel, style: cell)),
+              SizedBox(
+                width: 40,
+                child: Icon(Icons.chevron_right, color: scheme.primary, size: 22),
+              ),
+            ],
           ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              row.productName,
-              style: cell?.copyWith(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(flex: 2, child: Text(validity, style: cell)),
-          Expanded(
-            flex: 2,
-            child: Text(
-              row.quantityLabel,
-              style: cell,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Expanded(flex: 2, child: Text(row.costLabel, style: cell)),
-          Expanded(flex: 2, child: Text(row.saleLabel, style: cell)),
-          SizedBox(
-            width: 48,
-            child: IconButton(
-              tooltip: 'Editar',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              icon: const Icon(Icons.edit_outlined, size: 22),
-              onPressed: onEdit,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

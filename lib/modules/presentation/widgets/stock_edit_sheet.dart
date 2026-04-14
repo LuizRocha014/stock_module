@@ -19,6 +19,7 @@ class StockEditSheet extends StatefulWidget {
     DateTime? batchExpiration,
     bool batchActive,
     String? imagePath,
+    double batchUnitCost,
   ) onSave;
 
   @override
@@ -30,6 +31,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
   final _skuCtrl = TextEditingController();
   final _barcodeCtrl = TextEditingController();
   final _saleCtrl = TextEditingController();
+  final _costCtrl = TextEditingController();
   DateTime? _batchExpiration;
   bool _batchActive = true;
   bool _saving = false;
@@ -41,7 +43,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
   void initState() {
     super.initState();
     _batchExpiration = widget.row.expirationDate;
-    _batchActive = true;
+    _batchActive = widget.row.batchActive;
     widget.loadProduct().then((s) {
       if (!mounted) return;
       setState(() {
@@ -50,6 +52,9 @@ class _StockEditSheetState extends State<StockEditSheet> {
         _skuCtrl.text = s.sku ?? '';
         _barcodeCtrl.text = s.barcode ?? '';
         _saleCtrl.text = BrlCurrencyInputFormatter.formatDouble(s.salePrice);
+        _costCtrl.text = BrlCurrencyInputFormatter.formatDouble(
+          (widget.row.unitCost ?? 0).toDouble(),
+        );
       });
     }).catchError((e) {
       if (!mounted) return;
@@ -63,6 +68,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
     _skuCtrl.dispose();
     _barcodeCtrl.dispose();
     _saleCtrl.dispose();
+    _costCtrl.dispose();
     super.dispose();
   }
 
@@ -87,6 +93,7 @@ class _StockEditSheetState extends State<StockEditSheet> {
       return;
     }
     final sale = BrlCurrencyInputFormatter.parseToDouble(_saleCtrl.text);
+    final cost = BrlCurrencyInputFormatter.parseToDouble(_costCtrl.text);
     final updated = base.copyWith(
       name: _nameCtrl.text.trim(),
       sku: _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
@@ -95,7 +102,13 @@ class _StockEditSheetState extends State<StockEditSheet> {
     );
     setState(() => _saving = true);
     try {
-      await widget.onSave(updated, _batchExpiration, _batchActive, _imagePath);
+      await widget.onSave(
+        updated,
+        _batchExpiration,
+        _batchActive,
+        _imagePath,
+        cost < 0 ? 0 : cost,
+      );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -187,6 +200,16 @@ class _StockEditSheetState extends State<StockEditSheet> {
                         controller: _saleCtrl,
                         decoration: const InputDecoration(
                           labelText: 'Preço de venda',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [BrlCurrencyInputFormatter()],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _costCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Preço de custo (unitário · lote atual)',
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.number,

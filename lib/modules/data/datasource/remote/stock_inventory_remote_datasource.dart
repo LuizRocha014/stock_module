@@ -30,6 +30,8 @@ abstract class IStockInventoryRemoteDataSource {
   Future<void> putProduct(String id, Map<String, dynamic> body);
 
   Future<void> putProductBatch(String id, Map<String, dynamic> body);
+
+  Future<void> deleteProductBatch(String id);
 }
 
 class StockEntryRequest {
@@ -40,6 +42,7 @@ class StockEntryRequest {
     required this.costPrice,
     this.expirationDate,
     this.entryDate,
+    this.batchId,
   });
 
   final String productId;
@@ -49,6 +52,9 @@ class StockEntryRequest {
   final DateTime? expirationDate;
   final DateTime? entryDate;
 
+  /// Acréscimo em lote existente (quando a API suporta).
+  final String? batchId;
+
   Map<String, dynamic> toJson() => {
         'productId': productId,
         'branchId': branchId,
@@ -56,6 +62,7 @@ class StockEntryRequest {
         'costPrice': costPrice,
         'expirationDate': expirationDate?.toUtc().toIso8601String(),
         'entryDate': entryDate?.toUtc().toIso8601String(),
+        if (batchId != null && batchId!.trim().isNotEmpty) 'batchId': batchId!.trim(),
       };
 }
 
@@ -258,6 +265,15 @@ class StockInventoryRemoteDataSource implements IStockInventoryRemoteDataSource 
       body: jsonEncode(body),
     );
     _throwIfError(r, 'PUT /api/productbatches/{id}');
+  }
+
+  @override
+  Future<void> deleteProductBatch(String id) async {
+    final r = await _client.delete(
+      _uri('/api/productbatches/$id'),
+      headers: _headers(),
+    );
+    _throwIfError(r, 'DELETE /api/productbatches/{id}');
   }
 }
 

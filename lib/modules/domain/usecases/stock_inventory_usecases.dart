@@ -1,5 +1,6 @@
+import 'package:stock_module/modules/domain/entities/product_stock_detail_entity.dart';
 import 'package:stock_module/modules/domain/entities/stock_entry_params.dart';
-import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
+import 'package:stock_module/modules/domain/entities/stock_product_summary_entity.dart';
 import 'package:stock_module/modules/domain/repositories/stock_inventory_repository.dart';
 
 class LoadStockInventoryUseCase {
@@ -7,8 +8,17 @@ class LoadStockInventoryUseCase {
 
   final IStockInventoryRepository _repository;
 
-  Future<List<StockInventoryRowEntity>> call({String? branchId}) =>
-      _repository.loadRows(branchId: branchId);
+  Future<List<StockProductSummaryEntity>> call({String? branchId}) =>
+      _repository.loadProductSummaries(branchId: branchId);
+}
+
+class GetProductStockDetailUseCase {
+  GetProductStockDetailUseCase(this._repository);
+
+  final IStockInventoryRepository _repository;
+
+  Future<ProductStockDetailEntity> call(String productId, {String? branchId}) =>
+      _repository.getProductStockDetail(productId, branchId: branchId);
 }
 
 class ListStockFormOptionsUseCase {
@@ -29,4 +39,12 @@ class RegisterStockEntryUseCase {
   final IStockInventoryRepository _repository;
 
   Future<StockEntryResult> call(StockEntryParams params) => _repository.registerEntry(params);
+}
+
+class DeleteProductBatchUseCase {
+  DeleteProductBatchUseCase(this._repository);
+
+  final IStockInventoryRepository _repository;
+
+  Future<void> call(String batchId) => _repository.deleteProductBatch(batchId);
 }

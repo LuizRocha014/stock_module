@@ -6,6 +6,8 @@ class StockEntryParams {
     required this.costPrice,
     this.expirationDate,
     this.entryDate,
+    /// Se informado, a quantidade é acrescentada neste lote (`batchId` no corpo do POST).
+    this.targetBatchId,
   });
 
   final String productId;
@@ -14,6 +16,7 @@ class StockEntryParams {
   final double costPrice;
   final DateTime? expirationDate;
   final DateTime? entryDate;
+  final String? targetBatchId;
 }
 
 class StockEntryResult {

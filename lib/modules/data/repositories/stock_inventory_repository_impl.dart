@@ -1,8 +1,10 @@
 import 'package:stock_module/modules/data/datasource/remote/stock_inventory_remote_datasource.dart';
+import 'package:stock_module/modules/data/models/product_batch_dto.dart';
 import 'package:stock_module/modules/domain/entities/create_product_params.dart';
 import 'package:stock_module/modules/domain/entities/product_snapshot.dart';
+import 'package:stock_module/modules/domain/entities/product_stock_detail_entity.dart';
 import 'package:stock_module/modules/domain/entities/stock_entry_params.dart';
-import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
+import 'package:stock_module/modules/domain/entities/stock_product_summary_entity.dart';
 import 'package:stock_module/modules/domain/repositories/stock_inventory_repository.dart';
 
 class StockInventoryRepositoryImpl implements IStockInventoryRepository {
@@ -25,7 +27,7 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
   }
 
   @override
-  Future<List<StockInventoryRowEntity>> loadRows({String? branchId}) async {
+  Future<List<StockProductSummaryEntity>> loadProductSummaries({String? branchId}) async {
     final products = await _remote.fetchProducts();
     final byId = {for (final p in products) p.id: p};
     final batches = await _remote.fetchProductBatches(branchId: branchId);
@@ -47,30 +49,122 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
       return 'R\$ $fixed';
     }
 
-    final rows = <StockInventoryRowEntity>[];
+    final grouped = <String, List<ProductBatchDto>>{};
     for (final b in batches) {
-      if (b.active == false) continue;
-      final p = byId[b.productId];
-      final name = p?.name ?? 'Produto ${b.productId}';
-      final q = b.quantity;
-      rows.add(
-        StockInventoryRowEntity(
-          batchId: b.id,
-          productId: b.productId,
+      grouped.putIfAbsent(b.productId, () => []).add(b);
+    }
+
+    final summaries = <StockProductSummaryEntity>[];
+    for (final entry in grouped.entries) {
+      final productId = entry.key;
+      final list = entry.value;
+      final activeBatches = list.where((b) => b.active != false).toList();
+      if (activeBatches.isEmpty) continue;
+
+      num totalQty = 0;
+      for (final b in activeBatches) {
+        totalQty += b.quantity ?? 0;
+      }
+      if (totalQty <= 0) continue;
+
+      final p = byId[productId];
+      final name = p?.name ?? 'Produto $productId';
+
+      num sumCost = 0;
+      num sumQ = 0;
+      for (final b in activeBatches) {
+        final q = b.quantity ?? 0;
+        final c = b.effectiveCost;
+        if (c != null && q > 0) {
+          sumCost += q * c;
+          sumQ += q;
+        }
+      }
+      final avgCost = sumQ > 0 ? sumCost / sumQ : null;
+
+      DateTime? earliest;
+      for (final b in activeBatches) {
+        final e = b.expirationDate;
+        if (e == null) continue;
+        if (earliest == null || e.isBefore(earliest)) earliest = e;
+      }
+
+      summaries.add(
+        StockProductSummaryEntity(
+          productId: productId,
           productName: name,
           sku: p?.sku,
           barcode: p?.barcode,
-          imageUrl: imageByProduct[b.productId],
-          expirationDate: b.expirationDate,
-          quantity: q,
-          quantityLabel: q == null ? '—' : _formatQty(q),
-          costLabel: asMoney(b.effectiveCost),
+          imageUrl: imageByProduct[productId],
+          totalQuantity: totalQty,
+          quantityLabel: _formatQty(totalQty),
+          costLabel: avgCost == null ? '—' : asMoney(avgCost),
           saleLabel: asMoney(p?.salePrice),
+          activeBatchCount: activeBatches.length,
+          earliestExpiration: earliest,
         ),
       );
     }
-    rows.sort((a, b) => a.productName.compareTo(b.productName));
-    return rows;
+    summaries.sort((a, b) => a.productName.compareTo(b.productName));
+    return summaries;
+  }
+
+  @override
+  Future<ProductStockDetailEntity> getProductStockDetail(String productId, {String? branchId}) async {
+    final products = await _remote.fetchProducts();
+    final byId = {for (final p in products) p.id: p};
+    final p = byId[productId];
+    final batches = await _remote.fetchProductBatches(branchId: branchId, productId: productId);
+
+    String? imageUrl;
+    try {
+      imageUrl = await _remote.fetchMainProductImageUrl(productId);
+    } catch (_) {
+      imageUrl = null;
+    }
+
+    String asMoney(num? value) {
+      if (value == null) return 'R\$ 0,00';
+      final fixed = value.toStringAsFixed(2).replaceAll('.', ',');
+      return 'R\$ $fixed';
+    }
+
+    final name = p?.name ?? 'Produto $productId';
+    final sorted = [...batches]..sort((a, b) {
+        final ae = a.expirationDate;
+        final be = b.expirationDate;
+        if (ae == null && be == null) return 0;
+        if (ae == null) return 1;
+        if (be == null) return -1;
+        return ae.compareTo(be);
+      });
+
+    final lines = <StockBatchDetailEntity>[];
+    for (final b in sorted) {
+      final active = b.active != false;
+      final q = b.quantity;
+      lines.add(
+        StockBatchDetailEntity(
+          batchId: b.id,
+          quantity: q,
+          expirationDate: b.expirationDate,
+          active: active,
+          quantityLabel: q == null ? '—' : _formatQty(q),
+          costLabel: asMoney(b.effectiveCost),
+          unitCost: b.effectiveCost,
+        ),
+      );
+    }
+
+    return ProductStockDetailEntity(
+      productId: productId,
+      productName: name,
+      sku: p?.sku,
+      barcode: p?.barcode,
+      imageUrl: imageUrl,
+      saleLabel: asMoney(p?.salePrice),
+      batches: lines,
+    );
   }
 
   String _formatQty(num q) {
@@ -88,6 +182,7 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
         costPrice: params.costPrice,
         expirationDate: params.expirationDate,
         entryDate: params.entryDate,
+        batchId: params.targetBatchId,
       ),
     );
     return StockEntryResult(batchId: res.batchId, movementId: res.movementId);
@@ -152,10 +247,19 @@ class StockInventoryRepositoryImpl implements IStockInventoryRepository {
     required String batchId,
     DateTime? expirationDate,
     required bool active,
+    double? unitCost,
   }) async {
-    await _remote.putProductBatch(batchId, {
+    final body = <String, dynamic>{
       'expirationDate': expirationDate?.toUtc().toIso8601String(),
       'active': active,
-    });
+    };
+    if (unitCost != null) {
+      body['costPrice'] = unitCost;
+      body['unitCost'] = unitCost;
+    }
+    await _remote.putProductBatch(batchId, body);
   }
+
+  @override
+  Future<void> deleteProductBatch(String batchId) => _remote.deleteProductBatch(batchId);
 }

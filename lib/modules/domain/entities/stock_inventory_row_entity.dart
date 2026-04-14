@@ -9,9 +9,12 @@ class StockInventoryRowEntity {
     this.imageUrl,
     this.expirationDate,
     this.quantity,
+    /// Custo unitário do lote (mesma base do [costLabel]).
+    this.unitCost,
     required this.quantityLabel,
     required this.costLabel,
     required this.saleLabel,
+    this.batchActive = true,
   });
 
   final String batchId;
@@ -22,7 +25,11 @@ class StockInventoryRowEntity {
   final String? imageUrl;
   final DateTime? expirationDate;
   final num? quantity;
+  final num? unitCost;
   final String quantityLabel;
   final String costLabel;
   final String saleLabel;
+
+  /// Estado do lote ao abrir o editor (Switch “Lote ativo”).
+  final bool batchActive;
 }
