@@ -1,7 +1,9 @@
-import 'package:componentes_lr/componentes_lr.dart';
+import 'package:componentes_lr/componentes_lr.dart' show ImagePickerInputWidget;
 import 'package:flutter/material.dart';
 import 'package:stock_module/modules/domain/entities/product_snapshot.dart';
 import 'package:stock_module/modules/domain/entities/stock_inventory_row_entity.dart';
+import 'package:stock_module/modules/presentation/design/iw_app_shell.dart';
+import 'package:stock_module/modules/presentation/design/iw_design.dart';
 import 'package:stock_module/modules/presentation/utils/brl_currency_formatter.dart';
 
 class StockEditSheet extends StatefulWidget {
@@ -83,13 +85,14 @@ class _StockEditSheetState extends State<StockEditSheet> {
     if (d != null) setState(() => _batchExpiration = d);
   }
 
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
   Future<void> _save() async {
     final base = _base;
     if (base == null) return;
     if (_nameCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o nome do produto.')),
-      );
+      _toast('Informe o nome do produto.');
       return;
     }
     final sale = BrlCurrencyInputFormatter.parseToDouble(_saleCtrl.text);
@@ -97,7 +100,8 @@ class _StockEditSheetState extends State<StockEditSheet> {
     final updated = base.copyWith(
       name: _nameCtrl.text.trim(),
       sku: _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
-      barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
+      barcode:
+          _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
       salePrice: sale < 0 ? 0 : sale,
     );
     setState(() => _saving = true);
@@ -111,153 +115,186 @@ class _StockEditSheetState extends State<StockEditSheet> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
+      if (mounted) _toast(e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
+  void _toast(String m) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-
     return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 16 + bottom),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 16 + bottom),
       child: _loadError != null
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('$_loadError', style: TextStyle(color: scheme.error)),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Fechar'),
-                ),
-              ],
-            )
+          ? _ErrorBlock(
+              message: '$_loadError', onClose: () => Navigator.of(context).pop())
           : _base == null
               ? const SizedBox(
                   height: 200,
                   child: Center(child: CircularProgressIndicator()),
                 )
-              : SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Editar',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        widget.row.productName,
-                        style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _nameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nome',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _skuCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'SKU',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _barcodeCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Código de barras',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _saleCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Preço de venda',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [BrlCurrencyInputFormatter()],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _costCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Preço de custo (unitário · lote atual)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [BrlCurrencyInputFormatter()],
-                      ),
-                      const SizedBox(height: 16),
-                      ImagePickerInputWidget(
-                        title: 'Adicionar imagem do produto (opcional)',
-                        onImageChanged: (path) => _imagePath = path,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Lote',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Lote ativo'),
-                        value: _batchActive,
-                        onChanged: (v) => setState(() => _batchActive = v),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _pickDate,
-                        icon: const Icon(Icons.calendar_today_outlined),
-                        label: Text(
-                          _batchExpiration == null
-                              ? 'Validade (opcional)'
-                              : 'Validade: ${_batchExpiration!.day.toString().padLeft(2, '0')}/${_batchExpiration!.month.toString().padLeft(2, '0')}/${_batchExpiration!.year}',
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      FilledButton(
-                        onPressed: _saving ? null : _save,
-                        child: _saving
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Salvar'),
-                      ),
-                    ],
-                  ),
+              : _buildForm(),
+    );
+  }
+
+  Widget _buildForm() {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          IwSheetHeader(
+            title: 'Editar produto',
+            subtitle: widget.row.productName,
+            onClose: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(height: 22),
+          TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(labelText: 'Nome'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _skuCtrl,
+            decoration: const InputDecoration(labelText: 'SKU'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _barcodeCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Código de barras',
+              prefixIcon: Icon(Icons.qr_code_2_outlined),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _saleCtrl,
+            decoration: const InputDecoration(labelText: 'Preço de venda'),
+            keyboardType: TextInputType.number,
+            inputFormatters: [BrlCurrencyInputFormatter()],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _costCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Preço de custo (unitário · lote atual)',
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [BrlCurrencyInputFormatter()],
+          ),
+          const SizedBox(height: 14),
+          ImagePickerInputWidget(
+            title: 'Adicionar imagem do produto (opcional)',
+            onImageChanged: (path) => _imagePath = path,
+          ),
+          const SizedBox(height: 18),
+          const Divider(height: 1, color: IwColors.outlineVariant),
+          const SizedBox(height: 14),
+          const Text(
+            'Lote',
+            style: TextStyle(
+              fontSize: 14,
+              height: 20 / 14,
+              fontWeight: FontWeight.w600,
+              color: IwColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ActiveSwitch(
+            value: _batchActive,
+            onChanged: (v) => setState(() => _batchActive = v),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _pickDate,
+            icon: const Icon(Icons.calendar_today_outlined, size: 18),
+            label: Text(
+              _batchExpiration == null
+                  ? 'Validade (opcional)'
+                  : 'Validade: ${_fmtDate(_batchExpiration!)}',
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            height: 52,
+            child: FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Salvar'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveSwitch extends StatelessWidget {
+  const _ActiveSwitch({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(IwRadius.sm),
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Lote ativo',
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 24 / 16,
+                  color: IwColors.onSurface,
                 ),
+              ),
+            ),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBlock extends StatelessWidget {
+  const _ErrorBlock({required this.message, required this.onClose});
+  final String message;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.cloud_off_outlined,
+            size: 48, color: IwColors.error),
+        const SizedBox(height: 12),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: IwColors.onSurface),
+        ),
+        const SizedBox(height: 16),
+        TextButton(onPressed: onClose, child: const Text('Fechar')),
+      ],
     );
   }
 }

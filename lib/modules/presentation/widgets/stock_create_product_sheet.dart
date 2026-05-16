@@ -1,19 +1,19 @@
-import 'package:componentes_lr/componentes_lr.dart';
+import 'package:componentes_lr/componentes_lr.dart' show ImagePickerInputWidget;
 import 'package:flutter/material.dart';
 import 'package:stock_module/modules/domain/entities/create_product_params.dart';
+import 'package:stock_module/modules/presentation/design/iw_app_shell.dart';
+import 'package:stock_module/modules/presentation/design/iw_design.dart';
 import 'package:stock_module/modules/presentation/utils/brl_currency_formatter.dart';
 
-/// Cadastro apenas de produto (POST /api/products).
 class StockCreateProductSheet extends StatefulWidget {
-  const StockCreateProductSheet({
-    super.key,
-    required this.onSave,
-  });
+  const StockCreateProductSheet({super.key, required this.onSave});
 
-  final Future<void> Function(CreateProductParams params, {String? imagePath}) onSave;
+  final Future<void> Function(CreateProductParams params, {String? imagePath})
+      onSave;
 
   @override
-  State<StockCreateProductSheet> createState() => _StockCreateProductSheetState();
+  State<StockCreateProductSheet> createState() =>
+      _StockCreateProductSheetState();
 }
 
 class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
@@ -44,18 +44,8 @@ class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final sku = _skuCtrl.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o nome do produto.')),
-      );
-      return;
-    }
-    if (sku.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o SKU.')),
-      );
-      return;
-    }
+    if (name.isEmpty) return _toast('Informe o nome do produto.');
+    if (sku.isEmpty) return _toast('Informe o SKU.');
     final sale = BrlCurrencyInputFormatter.parseToDouble(_saleCtrl.text);
     final barcode = _barcodeCtrl.text.trim();
     setState(() => _saving = true);
@@ -73,121 +63,147 @@ class _StockCreateProductSheetState extends State<StockCreateProductSheet> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
+      if (mounted) _toast(e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
+  void _toast(String m) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-
     return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 16 + bottom),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 16 + bottom),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Novo produto',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            IwSheetHeader(
+              title: 'Novo produto',
+              subtitle: 'Cadastre o produto antes de registrar a primeira entrada.',
+              onClose: () => Navigator.of(context).pop(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 22),
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nome',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Nome'),
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: _skuCtrl,
-              decoration: const InputDecoration(
-                labelText: 'SKU',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'SKU'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: _barcodeCtrl,
               decoration: const InputDecoration(
                 labelText: 'Código de barras (opcional)',
-                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.qr_code_2_outlined),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _unitType,
+                    decoration: const InputDecoration(labelText: 'Unidade'),
+                    items: const [
+                      DropdownMenuItem(value: 'UN', child: Text('UN')),
+                      DropdownMenuItem(value: 'KG', child: Text('KG')),
+                      DropdownMenuItem(value: 'LT', child: Text('LT')),
+                    ],
+                    onChanged: (v) => setState(() => _unitType = v ?? 'UN'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _saleCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Preço de venda'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [BrlCurrencyInputFormatter()],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _PerishableSwitch(
+              value: _isPerishable,
+              onChanged: (v) => setState(() => _isPerishable = v),
+            ),
+            const SizedBox(height: 6),
             ImagePickerInputWidget(
               title: 'Imagem do produto (opcional)',
               onImageChanged: (path) => _imagePath = path,
             ),
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Unidade',
-                border: OutlineInputBorder(),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: _unitType,
-                  items: const [
-                    DropdownMenuItem(value: 'UN', child: Text('UN')),
-                    DropdownMenuItem(value: 'KG', child: Text('KG')),
-                    DropdownMenuItem(value: 'LT', child: Text('LT')),
-                  ],
-                  onChanged: (v) => setState(() => _unitType = v ?? 'UN'),
-                ),
+            const SizedBox(height: 22),
+            SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _submit,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(_saving ? 'Salvando…' : 'Cadastrar produto'),
               ),
             ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Produto perecível'),
-              value: _isPerishable,
-              onChanged: (v) => setState(() => _isPerishable = v),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _saleCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Preço de venda',
-                border: OutlineInputBorder(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PerishableSwitch extends StatelessWidget {
+  const _PerishableSwitch({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(IwRadius.sm),
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Produto perecível',
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 24 / 16,
+                      color: IwColors.onSurface,
+                    ),
+                  ),
+                  Text(
+                    'Coletaremos lote e validade nas próximas entradas',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: IwColors.onSurfaceVariant,
+                      height: 16 / 12,
+                    ),
+                  ),
+                ],
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [BrlCurrencyInputFormatter()],
             ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: _saving ? null : _submit,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(_saving ? 'Salvando…' : 'Cadastrar produto'),
-            ),
+            Switch(value: value, onChanged: onChanged),
           ],
         ),
       ),

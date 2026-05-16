@@ -233,23 +233,26 @@ class StockHomeController extends GetxController {
     }
   }
 
-  Future<void> confirmAndDeleteBatch(BuildContext context, StockInventoryRowEntity row) async {
+  Future<void> confirmAndDeleteBatch(
+      BuildContext context, StockInventoryRowEntity row) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
         return AlertDialog(
+          icon: const Icon(Icons.delete_outline, color: Color(0xFFBA1A1A)),
           title: const Text('Excluir lote'),
           content: Text(
             'Excluir o lote de "${row.productName}" (${row.quantityLabel})?\n'
             'O estoque deste lote será removido.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: scheme.error,
-                foregroundColor: scheme.onError,
+                backgroundColor: const Color(0xFFBA1A1A),
+                foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Excluir'),
@@ -298,6 +301,8 @@ class StockHomeController extends GetxController {
       showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.search_off_outlined,
+              color: Color(0xFFB36500)),
           title: const Text('Produto não encontrado'),
           content: Text(
             'Não existe produto vinculado ao código de barras:\n$barcode',
@@ -317,37 +322,40 @@ class StockHomeController extends GetxController {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF1F7A4D)),
         title: const Text('Produto encontrado'),
-        content: SizedBox(
-          width: 360,
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nome: ${found.productName}'),
-                  const SizedBox(height: 6),
-                  Text('Valor: ${found.saleLabel}'),
-                  const SizedBox(height: 6),
-                  Text('Quantidade: ${found.quantityLabel}'),
-                ],
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                found.productName,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text('Valor: ${found.saleLabel}'),
+              const SizedBox(height: 4),
+              Text('Quantidade: ${found.quantityLabel}'),
+            ],
           ),
         ),
         actions: [
           TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Voltar'),
+          ),
+          FilledButton.icon(
             onPressed: () {
               Navigator.of(ctx).pop();
               _snack(context, 'Produto adicionado ao carrinho.');
             },
-            child: const Text('Adicionar ao carrinho'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Voltar'),
+            icon: const Icon(Icons.add_shopping_cart_outlined, size: 18),
+            label: const Text('Adicionar ao carrinho'),
           ),
         ],
       ),

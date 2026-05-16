@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:stock_module/modules/presentation/design/iw_app_shell.dart';
+import 'package:stock_module/modules/presentation/design/iw_design.dart';
 
 class BarcodeScannerSheet extends StatefulWidget {
   const BarcodeScannerSheet({super.key});
@@ -35,25 +37,36 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: SizedBox(
-        height: 420,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ListTile(
-              title: const Text('Ler código de barras'),
-              trailing: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+        height: 460,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              IwSheetHeader(
+                title: 'Ler código de barras',
+                subtitle: 'Aponte a câmera para o código.',
+                onClose: () => Navigator.of(context).pop(),
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: MobileScanner(
-                controller: _controller,
-                onDetect: _onDetect,
+              const SizedBox(height: 14),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(IwRadius.lg),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: IwColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(IwRadius.lg),
+                      border: Border.all(color: IwColors.outlineVariant),
+                    ),
+                    child: MobileScanner(
+                      controller: _controller,
+                      onDetect: _onDetect,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
